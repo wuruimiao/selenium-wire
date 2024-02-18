@@ -4,11 +4,17 @@ import logging
 from seleniumwire import storage
 from seleniumwire.handler import InterceptRequestHandler
 from seleniumwire.modifier import RequestModifier
-from seleniumwire.thirdparty.mitmproxy import addons
+# from seleniumwire.thirdparty.mitmproxy import addons
 from seleniumwire.thirdparty.mitmproxy.master import Master
 from seleniumwire.thirdparty.mitmproxy.options import Options
 from seleniumwire.thirdparty.mitmproxy.server import ProxyConfig, ProxyServer
 from seleniumwire.utils import build_proxy_args, extract_cert_and_key, get_upstream_proxy
+from mitmproxy.master import Master
+from mitmproxy.addons import (
+    core, disable_h2c, proxyauth, proxyserver, dns_resolver, next_layer, save, tlsconfig,
+    upstream_auth
+)
+from mitmproxy import optmanager
 
 logger = logging.getLogger(__name__)
 
@@ -39,14 +45,8 @@ class MitmProxy:
 
         self._event_loop = asyncio.new_event_loop()
 
-        mitmproxy_opts = Options()
-
-        self.master = Master(self._event_loop, mitmproxy_opts)
-        self.master.addons.add(*addons.default_addons())
-        self.master.addons.add(SendToLogger())
-        self.master.addons.add(InterceptRequestHandler(self))
-
-        mitmproxy_opts.update(
+        opts = Options()
+        opts.update(
             confdir=self.storage.home_dir,
             listen_host=host,
             listen_port=port,
@@ -58,7 +58,22 @@ class MitmProxy:
             **{k[5:]: v for k, v in options.items() if k.startswith('mitm_')},
         )
 
-        self.master.server = ProxyServer(ProxyConfig(mitmproxy_opts))
+        self.master = Master(opts, self._event_loop)
+        self.master.addons.add(
+            core.Core(),
+            disable_h2c.DisableH2C(),
+            proxyauth.ProxyAuth(),
+            proxyserver.Proxyserver(),
+            dns_resolver.DnsResolver(),
+            next_layer.NextLayer(),
+            save.Save(),
+            tlsconfig.TlsConfig(),
+            upstream_auth.UpstreamAuth(),
+        )
+        self.master.addons.add(SendToLogger())
+        self.master.addons.add(InterceptRequestHandler(self))
+
+        # self.master.server = ProxyServer(ProxyConfig(mitmproxy_opts))
 
         if options.get('disable_capture', False):
             self.scopes = ['$^']
@@ -72,6 +87,7 @@ class MitmProxy:
         """Get a tuple of the address and port the proxy server
         is listening on.
         """
+        # TODO: 修改
         return self.master.server.address
 
     def shutdown(self):

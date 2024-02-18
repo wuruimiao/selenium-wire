@@ -8,16 +8,10 @@ We try to be very hygienic regarding the exceptions we throw:
 
 See also: http://lucumr.pocoo.org/2014/10/16/on-error-handling/
 """
-
-
-class MitmproxyException(Exception):
-
-    """
-    Base class for all exceptions thrown by mitmproxy.
-    """
-
-    def __init__(self, message=None):
-        super().__init__(message)
+from mitmproxy.exceptions import (
+    MitmproxyException, FlowReadException, ControlException, CommandError, OptionsError,
+    AddonManagerError, AddonHalt,
+)
 
 
 class Kill(MitmproxyException):
@@ -81,34 +75,7 @@ class ReplayException(MitmproxyException):
     pass
 
 
-class FlowReadException(MitmproxyException):
-    pass
-
-
-class ControlException(MitmproxyException):
-    pass
-
-
 class SetServerNotAllowedException(MitmproxyException):
-    pass
-
-
-class CommandError(Exception):
-    pass
-
-
-class OptionsError(MitmproxyException):
-    pass
-
-
-class AddonManagerError(MitmproxyException):
-    pass
-
-
-class AddonHalt(MitmproxyException):
-    """
-        Raised by addons to signal that no further handlers should handle this event.
-    """
     pass
 
 
